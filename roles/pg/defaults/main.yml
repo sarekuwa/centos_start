@@ -2,10 +2,9 @@
 # defaults file for pg
 pguser: postgres
 pggroup: postgres
-pgdata: "/data"
+pgdata: "/var/lib/pgsql/14/data"
 pgcluster_reset: false
 pgsql_cluster: false
-repo_postgres_7: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
-repo_postgres_8: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
-pgbin: "/usr/pgsql-13/bin/postgresql-13-setup"
-zabbix_db: zabbixdb
+repo_postgres: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+pgbin: "/usr/pgsql-14/bin/postgresql-14-setup"
+

@@ -3,6 +3,6 @@
 
 - name: reload postgres
   service:
-    name: postgresql-13.service
+    name: postgresql-14.service
     state: reloaded
-  tags: pg
+  tags: pg,ranger
