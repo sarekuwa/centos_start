@@ -8,12 +8,20 @@
 2. **nginx**    Установка и конфигурация балансировщика.   Тег  `-t nginx`
 3. **pg**   Установка и конфигурирование базы данных. Тег  `-t pg`
 
-```
-Для работы необходимо создать собественный Ansible-vault
-*ansible-vault create group_vars/credentials*
-*А также пароль к нему который вы вводили при создании vault*
-touch .ansible_vault_pass
+### Для работы необходимо создать собественный Ansible-vault
 
+```
+ansible-vault create group_vars/credentials
+```
+
+### А также пароль к нему который вы вводили при создании vault
+
+```
+touch .ansible_vault_pass
+```
+
+*group_vars/credentials*
+```
 pgpass: password
 django_database_pass: password
 
