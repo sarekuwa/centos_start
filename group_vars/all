@@ -1,0 +1,76 @@
+# this is the site wide default
+#home
+hadoop_version:         3.2.0
+hadoop_home:            /etc/hadoop-{{ hadoop_version }}
+hadoop_logdir:          /var/log/hadoop
+hbase_version:          2.3.7
+hbase_home:             /etc/hbase-{{ hbase_version }} 
+phoenix_version:        5.1.2
+phoenix_home:           /etc/phoenix-{{ phoenix_version }}
+hadoop_uhome:           /home/hadoop
+hive_version:           3.1.2
+hive_home:              /etc/hive-{{ hive_version }}
+kylin_home:             /opt/kylin
+hadoop_user:            hadoop
+hadoop_group:           hadoop
+hadoop_download_url:    "https://archive.apache.org/dist/hadoop/common/hadoop-{{ hadoop_version }}/hadoop-{{ hadoop_version }}.tar.gz"
+hadoop_bin:             "{{ hadoop_home }}/bin"
+hdfs_tmp:               /data/hdfs/tmp
+hdfs_datanode:          /data/hdfs/datanode
+hdfs_namenode:          /data/hdfs/namenode
+hbase_download_url:     "http://archive.apache.org/dist/hbase/{{ hbase_version }}/hbase-{{ hbase_version }}-bin.tar.gz"
+hdfs_namenodes:         "{{ groups.hadoop }}"
+hbase_cluster:          false
+hadoop_cluster_master:  false
+ranger_db:              ranger
+namenode_port:      50070
+kylin_port:         7070
+superset_port:      8088
+hnm_http_port:      9870
+hrm_http_port:      8088
+hue_http_port:      8888
+webui_http_port:    8080
+hbase_ms_http_port: 16010
+hbase_rs_http_port: 16030
+oko_dss_http_port:  18290
+solr_http_port:     6083
+solr_url:           /solr/
+ranger_http_port:   6080
+ambari_http_port :  8080
+
+#Zabbix, pg
+pguser: postgres
+corpdomain: area.local
+confd: /etc/nginx/conf.d
+pg_name: postgres
+pg_port: 5432
+zabbix_database_user: zabbix
+zabbix_db: zabbixdb
+zabbix_port: 10051
+zabbix_user: zabbix
+zabbix_install: false
+
+#Apache phoenix
+phoenix_url        :      https://apache-mirror.rbc.ru/pub/apache/phoenix/phoenix-5.1.2/phoenix-hbase-2.2-5.1.2-bin.tar.gz
+phoenix_qs_url     :      https://dlcdn.apache.org/phoenix/phoenix-queryserver-6.0.0/phoenix-queryserver-6.0.0-bin.tar.gz
+phoenix_core_url   :      https://repo1.maven.org/maven2/org/apache/phoenix/phoenix-core/5.1.2/phoenix-core-5.1.2.jar
+phoenix_archive    :      phoenix-hbase-2.2-5.1.2-bin.tar.gz
+phoenix_qs_archive :      phoenix-queryserver-6.0.0-bin.tar.gz
+phoenix_dir        :      phoenix-hbase-2.2-5.1.2-bin
+phoenix_qs_dir     :      phoenix-queryserver-6.0.0
+phoenix_server_jar :      phoenix-server-hbase-2.2-5.1.2.jar
+phoenix_client_jar :      phoenix-client-hbase-2.2-5.1.2.jar
+phoenix_qs_jar     :      phoenix-queryserver-6.0.0.jar
+phoenix_core_jar   :      phoenix-core-5.1.2.jar
+apache_dir:      /etc/apache
+
+#Spark
+spark_uhome: /home/spark
+spark_user: spark
+spark_group: spark
+spark_version: 3.0.3
+spark_hadoop_ver: hadoop3.2
+spark_download_url: https://archive.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_hadoop_ver }}.tgz
+spark_home: /etc/spark/spark-{{ spark_version }}-bin-{{ spark_hadoop_ver }}
+spark_bin: "{{ spark_home }}/bin"
+

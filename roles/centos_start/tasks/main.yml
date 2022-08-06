@@ -1,0 +1,195 @@
+---
+# tasks file for centos7_start
+
+- name: "Check python variable"
+  debug:
+    var: install_python
+  tags: python
+
+- name: "Centos | Disable SELinux"
+  selinux:
+    state: disabled
+  tags: centos
+
+- name: "Centos | Ensure SELinux is set to disabled mode"
+  lineinfile:
+    path: "/etc/selinux/config"
+    regexp: '^SELINUX='
+    line: "SELINUX=disabled"
+  tags: centos
+
+- name: "Centos | Stop and disable firewalld."
+  systemd: 
+    name: firewalld
+    state: stopped
+    enabled: no
+  ignore_errors: true
+  tags: centos
+
+- name: "Centos | Install packages."
+  yum:  
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - epel-release
+    - htop
+    - mc
+    - vim 
+    - python2
+    - python3
+    - openssl-devel
+    - libffi-devel
+    - bzip2-devel
+    - wget 
+    - tmux
+    - net-tools
+    - python3-pip
+    state: latest
+  tags: centos
+
+- name: "Centos | Install the 'Development tools' package group."
+  yum:
+    name: "@Development tools"
+    state: present
+  tags: centos
+
+
+- name: "Centos | Create vimrc file"
+  file:
+    path: /root/.vimrc
+    state: touch
+    mode: 644
+  tags: centos
+
+- name: "Centos | Add a line to .vimrc file if the file does not exist, without passing regexp"
+  lineinfile:
+    path: /root/.vimrc
+    line: |
+      syntax on
+      colorscheme slate
+    create: yes
+  tags: centos
+
+- name: "Python | Download latest python version"
+  get_url:
+    url: "{{ python_download_url }}"
+    dest: "/tmp/Python-{{ python_version }}.tgz"
+    owner: "root"
+    group: "root"
+  when: install_python
+  tags: python
+
+- name: "Python | Create python install directory."
+  file:
+    path:  "{{ python_home }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: 0755
+  when: install_python
+  tags: python
+
+- name: "Python | Extract python archive"
+  unarchive:
+    src: "/tmp/Python-{{ python_version }}.tgz"
+    dest:  "{{ python_home }}"
+    owner: "root"
+    group: "root"
+    extra_opts: [--strip-components=1]
+    remote_src: yes
+  become: true
+  become_user: "root"
+  when: install_python
+  tags: python
+
+- name: "Python | Check installation directory."
+  shell:
+    cmd: ls -lah
+    chdir: "{{ python_home }}"
+  register: output
+  when: install_python
+  tags: python
+
+- debug:
+    var: output
+  when: install_python
+  tags: python
+
+- name: "Python | Run configure script."
+  shell:
+    cmd: ./configure --enable-optimizations
+    chdir: "{{ python_home }}"
+  register: output_configure
+  when: install_python
+  tags: python
+
+- debug:
+    var: output_configure
+  tags: python
+
+- name: "Python | Run installation script."
+  shell:
+    cmd: make altinstall
+    chdir: "{{ python_home }}"
+  register: output_install
+  when: install_python
+  tags: python
+
+- debug:
+    var: output_install
+  when: install_python
+  tags: python
+
+- name: "Python | Install Django 4"
+  pip:
+    name: "{{ item }}"
+    executable: pip3.9
+    state: present
+  with_items:
+   - psycopg2-binary
+   - django
+  when: install_python
+  tags: python
+
+- name: "Python | Create Python3.9 environment folder"
+  file:
+    name: "{{ django_path }}"
+    state: directory
+  when: install_python
+  tags: python
+
+- name: "Python | Create requirements.txt file for pip"
+  file:
+    path: "{{ django_path }}/requirements.txt"
+    state: touch
+  when: install_python
+  tags: python
+
+- name: "Python | Add a line to .vimrc file if the file does not exist, without passing regexp"
+  lineinfile:
+    path: "{{ django_path }}/requirements.txt"
+    line: |
+      psycopg2-binary
+      django
+      wheel
+      pytz     
+    create: yes
+  when: install_python
+  tags: python
+  
+- name: "Python | Delete python install directory."
+  file:
+    path:  "{{ item }}"
+    state: absent
+  loop:
+    - "{{ python_home }}"
+    - "/tmp/Python-{{ python_version }}.tgz"
+  when: install_python
+  tags: python
+
+- name: "Python | Install complete.."
+  set_fact:
+    install_python: (false|bool)
+    cacheable: yes
+  tags: python
+ 

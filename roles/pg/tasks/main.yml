@@ -1,0 +1,261 @@
+---
+
+- name: "PostgreSQL | Install pg repo package | CentOS 7"
+  yum:
+    name: "{{ repo_postgres_7 }}"
+    state: present
+    validate_certs: no
+  when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "7")
+  tags: pg
+
+- name: "PostgreSQL | Install pg repo package | CentOS 8"
+  yum:
+    name: "{{ repo_postgres_8 }}"
+    state: present
+    validate_certs: no
+    disable_gpg_check: yes
+  when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "8")
+  tags: pg
+
+- name: "PostgreSQL | Disable old pg packages installed | CentOS 8"
+  command:
+    cmd: dnf -qy module disable postgresql
+  when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "8")
+  tags: pg
+
+- name: "PostgreSQL | Ensure a list of pg packages installed | CentOS 7"
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - postgresql13-server
+    - postgresql13
+    - python-psycopg2
+    state: present
+  when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "7")
+  tags: pg
+
+- name: "PostgreSQL | Ensure a list of pg packages installed | CentOS 8"
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - postgresql13-server
+    - postgresql13
+    - python3-psycopg2
+    state: present
+  when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "8")
+  tags: pg
+
+- name: "Create postgres directory if it does not exist"
+  file:
+    path: "{{ pgdata }}"
+    owner: "{{ pguser }}"
+    group: "{{ pggroup }}"
+    state: directory
+    mode: '0700'
+  tags: pg
+
+- name: "PostgreSQL | Make sure the pgdata directory exists"
+  file:
+    path: "{{ pgdata }}"
+    owner: "{{ pguser }}"
+    group: "{{ pggroup }}"
+    state: directory
+    mode: '0700'
+  register: pgdata_dir_exist
+  when: pgdata != ""
+  tags: pg
+
+- name: "PostgreSQL | Check whether the postgres data directory is initialized | RedHat"
+  stat:
+    path: "{{ pgdata }}"
+  when: ansible_os_family == "RedHat" and not pgcluster_reset
+  register: pgdata_dir_initialized
+  tags: pg
+
+- name: "PostgreSQL | Add postgres user to sudoers"
+  lineinfile:
+    path: /etc/sudoers
+    state: present
+    line: '{{ pguser }} ALL=(ALL) NOPASSWD: ALL'
+    validate: '/usr/sbin/visudo -cf %s'
+  tags: pg
+
+- name: "PostgreSQL | Initialize the database "
+  command: "/usr/pgsql-13/bin/initdb -D /data"
+  register: result
+  become: yes
+  become_user: "{{ pguser }}"
+  ignore_errors: yes
+  tags: pg
+
+- debug:
+    var: result
+  tags: pg
+
+- name: "PostgreSQL | Copy pg_hba.conf to the targets"
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ pgdata }}/pg_hba.conf"
+    owner: "{{ pguser }}"
+    group: "{{ pggroup }}"
+  become: true
+  become_user: "{{ pguser }}"
+  notify: reload postgres
+  tags: pg,zabbix
+
+- name: "PostgreSQL | Change postgresql.conf"
+  lineinfile:
+    path: "{{ pgdata }}/postgresql.conf"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+  - { regexp: '^#listen_addresses', line: "listen_addresses = '{{ ansible_default_ipv4.address }}'"}
+  - { regexp: '^max_connections', line: "max_connections = 1000"}
+  tags: pg
+
+- name: "PostgreSQL | Change PGDATA in service postgresql-13"
+  lineinfile:
+    dest: "/usr/lib/systemd/system/postgresql-13.service"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backrefs: yes
+    state: present
+  with_items:
+   - { regexp: '^Environment=PGDATA=', line: 'Environment=PGDATA={{ pgdata }}' }
+  tags: pg
+
+- name: "PostgreSQL | Add nofile soft limit for the user postgres"
+  pam_limits:
+    domain: "{{ pguser }}"
+    limit_type: soft
+    limit_item: nofile
+    value: 4096
+  tags: pg
+
+- name: "PostgreSQL | Add nofile hard limit for the user postgres"
+  pam_limits:
+    domain: "{{ pguser }}"
+    limit_type: hard
+    limit_item: nofile
+    value: 16384
+  tags: pg
+
+- name: "PostgreSQL | Enable and start PG service"
+  systemd:
+    name: postgresql-13
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags: pg
+
+- name: "PostgreSQL | Change postgres user password"
+  postgresql_user:
+    db: postgres
+    name: "{{ pguser }}"
+    login_password: "{{ pgpass }}"
+    encrypted: yes
+  no_log: false
+  become: true
+  become_user: "{{ pguser }}"
+  tags: pg,zabbix
+
+###Add zabbix_server specific actions###
+#
+#Enabled
+#
+######################################
+- name: "PostgreSQL | Create zabbix user"
+  postgresql_user:
+    db: postgres
+    name: "{{ zabbix_database_user }}"
+    password: "{{ zabbix_database_pass }}"
+    encrypted: yes
+  no_log: true
+  become: true
+  become_user: "{{ pguser }}"
+  tags: pg,zabbix
+
+- name: "PostgreSQL | Create zabbix database"
+  postgresql_db:
+    name: "{{ zabbix_db }}"
+    owner: "{{ zabbix_database_user }}"
+  become: true
+  become_user: "{{ pguser }}"
+  tags: pg,zabbix
+
+- name: "PostgreSQL | Grant ALL privileges on database"
+  postgresql_privs:
+    db: "{{ zabbix_db }}"
+    privs: ALL
+    type: database
+    role: "{{ zabbix_database_user }}"
+  become: true
+  become_user: "{{ pguser }}"
+  tags: pg,zabbix
+
+- name:  "Copy initial schema scripts"
+  copy:
+    src: "{{ role_path }}/files/{{ item }}"
+    dest: /var/tmp
+    owner: "{{ pguser }}"
+    group: "{{ pguser }}"
+    mode: 0644
+  loop:
+    - schema.sql
+    - double.sql
+    - timescaledb.sql.gz
+    - create.sql.gz
+  when: zabbix_install
+  tags: zabbix
+
+- name: "Unpack SQL Gzip Archive"
+  shell:
+    cmd: "gzip -dfq /var/tmp/{{ item }}"
+    chdir: /var/tmp
+  loop:
+    - timescaledb.sql.gz
+    - create.sql.gz
+  when: zabbix_install|bool
+  tags: zabbix
+
+- name: "Upload schema from SQL script"
+  postgresql_query:
+    db: "{{ zabbix_db }}"
+    path_to_script: "{{ item }}"
+    login_user: "{{ zabbix_database_user }}"
+    login_password: "{{ zabbix_database_pass }}"
+    positional_args:
+    - 1
+  loop:
+    - /var/tmp/schema.sql
+    - /var/tmp/double.sql
+    - /var/tmp/timescaledb.sql
+  register: schema_validate
+  ignore_errors: true
+  run_once: true
+  when: zabbix_install|bool
+  tags: zabbix
+
+- debug:
+    msg: schema_validate
+  tags: zabbix
+
+- name: "Manual add create.sql data to zabbix database"
+  shell:
+    cmd: "psql {{ zabbix_db }} -U {{ zabbix_user }} -f /var/tmp/create.sql"
+  become_user: "{{ pguser }}"
+  register: psql_output
+  become: true
+  ignore_errors: true
+  when: zabbix_install|bool
+  tags: zabbix
+
+- debug:
+    msg: psql_output
+  when: zabbix_install|bool
+  tags: zabbix
+
+-

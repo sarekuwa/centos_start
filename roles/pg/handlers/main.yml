@@ -1,0 +1,8 @@
+---
+# handlers file for pg
+
+- name: reload postgres
+  service:
+    name: postgresql-13.service
+    state: reloaded
+  tags: pg

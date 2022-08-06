@@ -1,0 +1,18 @@
+hadoop_master: localhost
+secondary_node: localhost
+hbase_master_host: localhost
+hbase_backup_master: localhost
+env: dev
+hostmetadata: '"Linux" "Test playbooks"'
+master_ip: localhost
+hive_master_hostname: localhost
+database_master_hostname: localhost
+spark_master_host: localhost
+spark_master_ip:   localhost
+elk_cluster_hosts: '["127.0.0.1:5044","127.0.0.2:5044","127.0.0.3:5044"]'
+postgresql: localhost
+nginx: localhost
+kafka_node1: localhost
+kafka_node2: localhost
+kafka_supeip_node: 127.0.0.1:9092, 127.0.0.2:9092
+

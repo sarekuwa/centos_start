@@ -1,0 +1,45 @@
+---
+# file master.yml
+
+- name: "Setup project"
+  hosts: all
+  tasks:
+    - name: "Display hostnames of Local network"
+      debug:
+        msg: "The hostname is {{ ansible_hostname }} and the OS is {{ ansible_os_family }}"
+
+- name: "Setup postgres nodes"
+  hosts: db
+  gather_facts: yes
+  vars_files:
+  - ./group_vars/credentials
+  tasks:
+    - name: "Run the pg role"
+      import_role:
+        name: pg
+
+- name: "Setup Apps Tier | Centos "
+  hosts: centos
+  tasks:
+    - name: "Show CentOS hosts"
+      debug:
+        msg: "The CentOS hosts is {{ ansible_hostname }}"
+
+    - name: "Run CentOS role"
+      import_role:
+        name: centos_start
+
+- name: "Setup FrontEnd  Tier | Nginx"  
+  hosts: balancer
+  gather_facts: no
+  tasks:
+    - name: "Show balancer hosts"
+      debug:
+        msg: "The balancer host's is {{ ansible_hostname }}"
+
+    - name: "Run nginx role"
+      import_role:
+        name: nginx
+
+
+

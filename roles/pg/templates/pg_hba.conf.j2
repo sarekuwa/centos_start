@@ -1,0 +1,39 @@
+# default rules
+{% if pgsql_cluster %}
+local   all        {{ pguser }}         trust
+host    all        {{ pguser }}  127.0.0.1/32  trust
+host    all        {{ pguser }}  ::1/128       trust
+
+{%   if pgsql_replication_provider == 'repmgr' %}
+# replication rules
+local   replication   repmgr                                    trust
+host    replication   repmgr            127.0.0.1/32            trust
+host    replication   repmgr            {{ ( ansible_default_ipv4.network + '/' + ansible_default_ipv4.netmask  ) | ipaddr('net')  }}        trust
+
+local   repmgr        repmgr                                    trust
+host    repmgr        repmgr            127.0.0.1/32            trust
+host    repmgr        repmgr            {{ ( ansible_default_ipv4.network + '/' + ansible_default_ipv4.netmask  ) | ipaddr('net')  }}        trust
+{%   endif %}
+{% endif %}
+
+#Default configuration
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+# "local" is for Unix domain socket connections only
+local   all             all                                     trust
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            trust
+# IPv6 local connections:
+host    all             all             ::1/128                 trust
+
+{% for member in groups['zabbix'] %}
+host    {{ zabbix_db }}     {{ zabbix_user }}   {{ hostvars[member]['ansible_default_ipv4']['address'] }}/32     md5
+{% if not loop.last %}
+{% endif %}
+{% endfor %}
+
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+#local   replication     all                                     trust
+#host    replication     all             127.0.0.1/32            trust
+#host    replication     all             ::1/128                 trust
