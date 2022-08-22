@@ -44,6 +44,7 @@
     - tmux
     - net-tools
     - python3-pip
+    - yum-utils
     state: latest
   tags: centos
 
@@ -64,11 +65,15 @@
 - name: "Centos | Add a line to .vimrc file if the file does not exist, without passing regexp"
   lineinfile:
     path: /root/.vimrc
+    regexp: '^coloscheme'
+    backrefs: yes
     line: |
       syntax on
-      colorscheme slate
+      colorscheme koehler
     create: yes
   tags: centos
+
+#Python section
 
 - name: "Python | Download latest python version"
   get_url:
@@ -192,4 +197,55 @@
     install_python: (false|bool)
     cacheable: yes
   tags: python
+
+#Docker section
  
+- name: "Docker | Remove old versions"
+  yum:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - docker
+    - docker-client
+    - docker-client-latest
+    - docker-common
+    - docker-latest 
+    - docker-latest-logrotate 
+    - docker-logrotate 
+    - docker-engine
+  tags: docker 
+
+- name: "Docker | Add docker repository."
+  shell: 
+    cmd: "yum-config-manager --add-repo={{ repo_docker }}"
+  args:
+    creates: /etc/yum.repos.d/docker
+  tags: docker
+
+- name: "Docker | Install packages."
+  yum: 
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - docker-ce
+    - docker-ce-cli 
+    - containerd.io
+    - docker-compose-plugin
+    state: latest
+  tags: docker 
+
+- name: "Docker | Start and enable docker daemon via systemd."
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  tags: docker
+
+- name: "Docker | Add Docker user to admin group."
+  user:
+    name: docker
+    groups: wheel
+    append: yes
+    state: present
+    createhome: no
+  tags: docker

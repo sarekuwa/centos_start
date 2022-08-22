@@ -6,3 +6,4 @@ python_download_url: "https://www.python.org/ftp/python/{{ python_version }}/Pyt
 python_home: "/opt/python"
 install_python: (true|bool)
 django_path: "/opt/djangoprod"
+repo_docker: "https://download.docker.com/linux/centos/docker-ce.repo"
