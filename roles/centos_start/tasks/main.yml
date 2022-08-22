@@ -54,23 +54,11 @@
     state: present
   tags: centos
 
-
-- name: "Centos | Create vimrc file"
-  file:
-    path: /root/.vimrc
-    state: touch
-    mode: 644
-  tags: centos
-
-- name: "Centos | Add a line to .vimrc file if the file does not exist, without passing regexp"
-  lineinfile:
-    path: /root/.vimrc
-    regexp: '^coloscheme'
-    backrefs: yes
-    line: |
-      syntax on
-      colorscheme koehler
-    create: yes
+- name: "Centos | Copyo .vimrc file to root directory."
+  copy:
+    src: .vimrc
+    dest: "/root"
+    mode: 0600
   tags: centos
 
 #Python section
@@ -249,3 +237,94 @@
     state: present
     createhome: no
   tags: docker
+
+#Kubernetes section
+
+- name: "Kubernetes | Disable SWAP since kubernetes can't work with swap enabled (1/2)"
+  shell:
+    cmd: swapoff -a
+  tags: k8s
+
+- name: "Kubernetes | Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)"
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+    backup: yes
+  tags: k8s
+
+- name: "Kubernetes | Add Google cloud repository."
+  copy:
+    src:  kubernetes.repo
+    dest: "/etc/yum.repos.d"
+    mode: 0644
+  tags: k8s
+
+- name: "Kubernetes | Install packages."
+  yum:
+    name: "{{ packages }}"
+    disable_excludes: kubernetes
+  vars:
+    packages:
+    - kubeadm
+    - kubectl
+    - kubelet
+    state: latest
+  tags: k8s
+
+- name: "Kubernetes | Start and enable kubelet daemon via systemd."
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+  tags: k8s
+
+- name: "Kubernetes | Changing Docker cgroup and storage drivers."
+  copy:
+    src:  daemon.json
+    dest: "/etc/docker"
+    mode: 0644
+  notify: Restart docker
+  tags: k8s
+
+- name: "Remove containerd configuration."
+  file:
+    path: /etc/containerd/config.toml
+    state: absent
+  tags: k8s
+
+- name: "Kubernetes | Restart and containerd daemon via systemd."
+  systemd:
+    name: containerd
+    state: restarted
+  tags: k8s
+
+- name: "Kubernetes | Initialize Kubernetes control-plane."
+  command:
+    cmd: kubeadm init
+  register: output
+  when: install_k8s
+  tags: k8s
+
+- name: "Kubernetes | Logging initializing actions."
+  debug:
+    var: output
+  tags: k8s
+
+- name: "Kubernetes | Create config dir."
+  file:
+    state: directory
+    path:  /root/.kube
+    mode: 0644
+  tags: k8s
+
+- name: "Kubernetes | Copy config file."
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    mode: 0644
+    owner: root
+    group: root
+  tags: k8s
+
+
